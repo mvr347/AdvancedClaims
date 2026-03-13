@@ -1,0 +1,463 @@
+# ====================================================== #
+#              AdvancedClaims - Квесты                   #
+# ====================================================== #
+# Полная поддержка всех типов квестов для Minecraft 1.21+
+# 
+# ТИПЫ КВЕСТОВ:
+# - MINE_BLOCKS       : Добыча блоков (кирка)
+# - KILL_MOBS         : Убийство мобов (меч/лук)
+# - PLACE_BLOCKS      : Установка блоков (строительство)
+# - CRAFT_ITEMS       : Крафт предметов (верстак)
+# - FISH              : Рыбалка (удочка)
+# - BREAK_CROPS       : Сбор урожая (мотыга)
+# - BREED_ANIMALS     : Разведение животных (еда)
+# - TRADE_VILLAGERS   : Торговля с жителями (изумруды)
+# - ENCHANT_ITEMS     : Зачарование предметов (стол зачарования)
+# - BREW_POTIONS      : Варка зелий (зельеварка)
+# - COMPLETE_RAIDS    : Завершение рейдов (защита деревни)
+# - EXPLORE_STRUCTURES: Исследование структур (путешествия)
+# - COLLECT_ITEMS     : Сбор предметов (коллекционирование)
+# - USE_ITEMS         : Использование предметов
+# - CUSTOM            : Кастомный квест (через команды API)
+#
+# СЛОЖНОСТЬ:
+# - EASY      : Легкий (начальный уровень)
+# - MEDIUM    : Средний (опытный уровень)
+# - HARD      : Сложный (экспертный уровень)
+# - LEGENDARY : Легендарный (мастер уровень)
+# - BOSS      : Босс (победа над боссами)
+# - EVENT     : Событие (сезонные квесты)
+# - TEAM      : Командный (требует группы)
+#
+# КАТЕГОРИИ:
+# MINING, FARMING, FISHING, BUILDING, COMBAT, CRAFTING,
+# MAGIC, TRADING, EXPLORATION, COLLECTION, TEAM, EVENT
+# ====================================================== #
+
+quests:
+  # ===== ТИР 1: НОВИЧОК (Начальный уровень) =====
+  # Эти квесты доступны всем игрокам с tier-1 якорем
+  # Награды: небольшие бонусы к расширению и участникам
+  
+  novice_miner:
+    name: "<white>Начинающий Шахтер</white>"
+    description: "<gray>Добудьте 50 блоков угля для начала</gray>"
+    type: "MINE_BLOCKS"           # Тип: добыча блоков
+    target-name: "COAL_ORE"       # Цель: угольная руда
+    target-amount: 50             # Количество: 50 блоков
+    reward-expansion-blocks: 1    # Награда: +1 очко расширения
+    reward-members: 0             # Награда: +0 участников
+    tier: "tier-1"                # Тир привата: 1
+    repeatable: true              # Можно повторять
+    daily: false                  # Не ежедневный
+    difficulty: "EASY"            # Сложность: легкая
+    category: "MINING"            # Категория: добыча
+
+  novice_farmer:
+    name: "<white>Юный Фермер</white>"
+    description: "<gray>Соберите 30 пшеницы с полей</gray>"
+    type: "BREAK_CROPS"           # Тип: сбор урожая
+    target-name: "WHEAT"          # Цель: пшеница
+    target-amount: 30             # Количество: 30
+    reward-expansion-blocks: 1    # Награда: +1 очко расширения
+    reward-members: 0             # Награда: +0 участников
+    tier: "tier-1"                # Тир привата: 1
+    repeatable: true              # Можно повторять
+    daily: false                  # Не ежедневный
+    difficulty: "EASY"            # Сложность: легкая
+    category: "FARMING"           # Категория: фермерство
+
+  novice_fisher:
+    name: "<white>Рыбак-Любитель</white>"
+    description: "<gray>Поймайте 5 любых рыб</gray>"
+    type: "FISH"                  # Тип: рыбалка
+    target-name: "FISH"           # Цель: любая рыба
+    target-amount: 5              # Количество: 5
+    reward-expansion-blocks: 1    # Награда: +1 очко расширения
+    reward-members: 0             # Награда: +0 участников
+    tier: "tier-1"                # Тир привата: 1
+    repeatable: true              # Можно повторять
+    daily: false                  # Не ежедневный
+    difficulty: "EASY"            # Сложность: легкая
+    category: "FISHING"           # Категория: рыбалка
+
+  novice_builder:
+    name: "<white>Начинающий Строитель</white>"
+    description: "<gray>Поставьте 100 блоков булыжника</gray>"
+    type: "PLACE_BLOCKS"          # Тип: установка блоков
+    target-name: "COBBLESTONE"    # Цель: булыжник
+    target-amount: 100            # Количество: 100
+    reward-expansion-blocks: 2    # Награда: +2 очка расширения
+    reward-members: 1             # Награда: +1 участник
+    tier: "tier-1"                # Тир привата: 1
+    repeatable: false             # Одноразовый
+    daily: false                  # Не ежедневный
+    difficulty: "EASY"            # Сложность: легкая
+    category: "BUILDING"          # Категория: строительство
+
+  novice_hunter:
+    name: "<white>Начинающий Охотник</white>"
+    description: "<gray>Убейте 20 враждебных мобов</gray>"
+    type: "KILL_MOBS"             # Тип: убийство мобов
+    target-name: "MONSTER"        # Цель: любой монстр (авто-определение)
+    target-amount: 20             # Количество: 20
+    reward-expansion-blocks: 1    # Награда: +1 очко расширения
+    reward-members: 0             # Награда: +0 участников
+    tier: "tier-1"                # Тир привата: 1
+    repeatable: true              # Можно повторять
+    daily: false                  # Не ежедневный
+    difficulty: "EASY"            # Сложность: легкая
+    category: "COMBAT"            # Категория: бой
+
+  # ===== ТИР 2: ОПЫТНЫЙ (Средний уровень) =====
+  # Доступны игрокам с tier-2 якорем
+  # Награды: средние бонусы к расширению и участникам
+  
+  experienced_miner:
+    name: "<green>Опытный Шахтер</green>"
+    description: "<gray>Добудьте 100 железной руды</gray>"
+    type: "MINE_BLOCKS"
+    target-name: "IRON_ORE"
+    target-amount: 100
+    reward-expansion-blocks: 3
+    reward-members: 1
+    tier: "tier-2"
+    repeatable: false
+    daily: false
+    difficulty: "MEDIUM"
+    category: "MINING"
+
+  experienced_crafter:
+    name: "<green>Мастер Крафта</green>"
+    description: "<gray>Скрафтите 50 железных слитков</gray>"
+    type: "CRAFT_ITEMS"
+    target-name: "IRON_INGOT"
+    target-amount: 50
+    reward-expansion-blocks: 2
+    reward-members: 0
+    tier: "tier-2"
+    repeatable: true
+    daily: false
+    difficulty: "MEDIUM"
+    category: "CRAFTING"
+
+  experienced_breeder:
+    name: "<green>Животновод</green>"
+    description: "<gray>Разведите 15 животных</gray>"
+    type: "BREED_ANIMALS"
+    target-name: "ANIMAL"         # Цель: любое животное (авто-определение)
+    target-amount: 15
+    reward-expansion-blocks: 2
+    reward-members: 1
+    tier: "tier-2"
+    repeatable: true
+    daily: false
+    difficulty: "MEDIUM"
+    category: "FARMING"
+
+  experienced_trader:
+    name: "<green>Торговец</green>"
+    description: "<gray>Совершите 10 сделок с жителями</gray>"
+    type: "TRADE_VILLAGERS"
+    target-name: "VILLAGER"
+    target-amount: 10
+    reward-expansion-blocks: 2
+    reward-members: 0
+    tier: "tier-2"
+    repeatable: true
+    daily: false
+    difficulty: "MEDIUM"
+    category: "TRADING"
+
+  # ===== ТИР 3: ЭКСПЕРТ (Продвинутый уровень) =====
+  # Доступны игрокам с tier-3 якорем
+  # Награды: большие бонусы и открытие баффов
+  
+  expert_miner:
+    name: "<aqua>Эксперт Шахты</aqua>"
+    description: "<gray>Добудьте 30 алмазов</gray>"
+    type: "MINE_BLOCKS"
+    target-name: "DIAMOND_ORE"
+    target-amount: 30
+    reward-expansion-blocks: 5
+    reward-members: 2
+    tier: "tier-3"
+    repeatable: false
+    daily: false
+    difficulty: "HARD"
+    category: "MINING"
+
+  expert_enchanter:
+    name: "<aqua>Чародей</aqua>"
+    description: "<gray>Заколдуйте 5 предметов на столе зачарования</gray>"
+    type: "ENCHANT_ITEMS"
+    target-name: "ANY"            # Цель: любой предмет
+    target-amount: 5
+    reward-expansion-blocks: 3
+    reward-members: 1
+    tier: "tier-3"
+    repeatable: true
+    daily: false
+    difficulty: "HARD"
+    category: "MAGIC"
+
+  expert_brewer:
+    name: "<aqua>Зельевар</aqua>"
+    description: "<gray>Сварите 10 зелий</gray>"
+    type: "BREW_POTIONS"
+    target-name: "POTION"
+    target-amount: 10
+    reward-expansion-blocks: 3
+    reward-members: 1
+    tier: "tier-3"
+    repeatable: true
+    daily: false
+    difficulty: "HARD"
+    category: "MAGIC"
+
+  expert_raider:
+    name: "<aqua>Защитник Деревни</aqua>"
+    description: "<gray>Завершите 3 рейда</gray>"
+    type: "COMPLETE_RAIDS"
+    target-name: "RAID"
+    target-amount: 3
+    reward-expansion-blocks: 8
+    reward-members: 2
+    tier: "tier-3"
+    repeatable: false
+    daily: false
+    difficulty: "HARD"
+    category: "COMBAT"
+
+  # ===== ТИР 4: ЛЕГЕНДА (Элитный уровень) =====
+  # Доступны игрокам с tier-4 якорем
+  # Награды: максимальные бонусы
+  
+  legend_miner:
+    name: "<gold>Легендарный Шахтер</gold>"
+    description: "<gray>Добудьте 50 изумрудов</gray>"
+    type: "MINE_BLOCKS"
+    target-name: "EMERALD_ORE"
+    target-amount: 50
+    reward-expansion-blocks: 10
+    reward-members: 3
+    tier: "tier-4"
+    repeatable: false
+    daily: false
+    difficulty: "LEGENDARY"
+    category: "MINING"
+
+  legend_builder:
+    name: "<gold>Мастер-Архитектор</gold>"
+    description: "<gray>Постройте сооружение из 1000 каменных кирпичей</gray>"
+    type: "PLACE_BLOCKS"
+    target-name: "STONE_BRICKS"
+    target-amount: 1000
+    reward-expansion-blocks: 15
+    reward-members: 5
+    tier: "tier-4"
+    repeatable: false
+    daily: false
+    difficulty: "LEGENDARY"
+    category: "BUILDING"
+
+  legend_explorer:
+    name: "<gold>Исследователь Миров</gold>"
+    description: "<gray>Посетите 5 различных структур</gray>"
+    type: "EXPLORE_STRUCTURES"
+    target-name: "STRUCTURE"
+    target-amount: 5
+    reward-expansion-blocks: 12
+    reward-members: 3
+    tier: "tier-4"
+    repeatable: false
+    daily: false
+    difficulty: "LEGENDARY"
+    category: "EXPLORATION"
+
+  legend_collector:
+    name: "<gold>Коллекционер</gold>"
+    description: "<gray>Соберите 100 уникальных блоков</gray>"
+    type: "COLLECT_ITEMS"
+    target-name: "ALL_BLOCKS"
+    target-amount: 100
+    reward-expansion-blocks: 20
+    reward-members: 5
+    tier: "tier-4"
+    repeatable: false
+    daily: false
+    difficulty: "LEGENDARY"
+    category: "COLLECTION"
+
+  # ===== БОССЫ =====
+  # Квесты на победу над боссами
+  # Награды: уникальные баффы
+  
+  boss_wither:
+    name: "<dark_purple>Убийца Визера</dark_purple>"
+    description: "<gray>Победите Визера</gray>"
+    type: "KILL_MOBS"
+    target-name: "WITHER"
+    target-amount: 1
+    reward-expansion-blocks: 15
+    reward-members: 3
+    reward-buff: "PERK_REGEN"    # Открывает баффт регенерации
+    tier: "tier-4"
+    repeatable: true
+    daily: false
+    difficulty: "BOSS"
+    category: "COMBAT"
+
+  boss_ender_dragon:
+    name: "<dark_purple>Победитель Дракона</dark_purple>"
+    description: "<gray>Убейте Дракона Края</gray>"
+    type: "KILL_MOBS"
+    target-name: "ENDER_DRAGON"
+    target-amount: 1
+    reward-expansion-blocks: 20
+    reward-members: 5
+    reward-buff: "PERK_HASTE"     # Открывает баффт ускорения
+    tier: "tier-4"
+    repeatable: true
+    daily: false
+    difficulty: "BOSS"
+    category: "COMBAT"
+
+  # ===== ЕЖЕДНЕВНЫЕ КВЕСТЫ =====
+  # Сбрасываются каждый день в 00:00
+  # Награды: небольшие, но стабильные
+  
+  daily_fisher:
+    name: "<blue>Ежедневная Рыбалка</blue>"
+    description: "<gray>Поймайте 10 тресок</gray>"
+    type: "FISH"
+    target-name: "COD"
+    target-amount: 10
+    reward-expansion-blocks: 1
+    tier: "all"                   # Доступен всем тирам
+    repeatable: true
+    daily: true                   # Ежедневный
+    difficulty: "EASY"
+    category: "FISHING"
+
+  daily_miner:
+    name: "<blue>Ежедневная Добыча</blue>"
+    description: "<gray>Добудьте 64 угля</gray>"
+    type: "MINE_BLOCKS"
+    target-name: "COAL_ORE"
+    target-amount: 64
+    reward-expansion-blocks: 1
+    tier: "all"
+    repeatable: true
+    daily: true
+    difficulty: "EASY"
+    category: "MINING"
+
+  daily_farmer:
+    name: "<blue>Ежедневный Урожай</blue>"
+    description: "<gray>Соберите 100 пшеницы</gray>"
+    type: "BREAK_CROPS"
+    target-name: "WHEAT"
+    target-amount: 100
+    reward-expansion-blocks: 1
+    tier: "all"
+    repeatable: true
+    daily: true
+    difficulty: "EASY"
+    category: "FARMING"
+
+  daily_breeder:
+    name: "<blue>Ежедневное Разведение</blue>"
+    description: "<gray>Разведите 5 коров</gray>"
+    type: "BREED_ANIMALS"
+    target-name: "COW"
+    target-amount: 5
+    reward-expansion-blocks: 1
+    tier: "all"
+    repeatable: true
+    daily: true
+    difficulty: "EASY"
+    category: "FARMING"
+
+  daily_crafter:
+    name: "<blue>Ежедневный Крафт</blue>"
+    description: "<gray>Скрафтите 32 факела</gray>"
+    type: "CRAFT_ITEMS"
+    target-name: "TORCH"
+    target-amount: 32
+    reward-expansion-blocks: 1
+    tier: "all"
+    repeatable: true
+    daily: true
+    difficulty: "EASY"
+    category: "CRAFTING"
+
+  # ===== СЕЗОННЫЕ СОБЫТИТИЯ =====
+  # Доступны только в указанную дату
+  # event-only: true включает проверку даты
+  
+  event_halloween:
+    name: "<orange>Хэллоуинский Ужас</orange>"
+    description: "<gray>Убейте 100 зомби в Хэллоуин</gray>"
+    type: "KILL_MOBS"
+    target-name: "ZOMBIE"
+    target-amount: 100
+    reward-expansion-blocks: 5
+    reward-members: 2
+    tier: "all"
+    repeatable: false
+    daily: false
+    difficulty: "EVENT"
+    category: "EVENT"
+    event-only: true              # Только во время события
+    event-date: "2025-10-31"      # Дата события (ГГГГ-ММ-ДД)
+
+  event_newyear:
+    name: "<red>Новогодний Праздник</red>"
+    description: "<gray>Запустите 50 фейерверков</gray>"
+    type: "USE_ITEMS"
+    target-name: "FIREWORK_ROCKET"
+    target-amount: 50
+    reward-expansion-blocks: 5
+    reward-members: 2
+    tier: "all"
+    repeatable: false
+    daily: false
+    difficulty: "EVENT"
+    category: "EVENT"
+    event-only: true
+    event-date: "2026-01-01"
+
+  # ===== КОМАНДНЫЕ КВЕСТЫ =====
+  # Требуют минимальное количество игроков
+  # min-players: количество игроков в группе
+  
+  team_raider:
+    name: "<light_purple>Командный Рейдер</light_purple>"
+    description: "<gray>Завершите рейд с командой из 3+ игроков</gray>"
+    type: "COMPLETE_RAIDS"
+    target-name: "RAID"
+    target-amount: 1
+    reward-expansion-blocks: 10
+    reward-members: 3
+    tier: "tier-3"
+    repeatable: false
+    daily: false
+    difficulty: "TEAM"
+    category: "TEAM"
+    min-players: 3                # Минимум 3 игрока
+
+  team_builder:
+    name: "<light_purple>Командное Строительство</light_purple>"
+    description: "<gray>Постройте мега-сооружение (5000 блоков)</gray>"
+    type: "PLACE_BLOCKS"
+    target-name: "ANY"
+    target-amount: 5000
+    reward-expansion-blocks: 25
+    reward-members: 5
+    tier: "tier-4"
+    repeatable: false
+    daily: false
+    difficulty: "TEAM"
+    category: "TEAM"
+    min-players: 3

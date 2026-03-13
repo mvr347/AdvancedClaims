@@ -1,0 +1,60 @@
+name: AdvancedClaims
+version: '1.0.0'
+main: me.lovelace.advancedclaims.AdvancedClaims
+api-version: '1.21'
+depend: [PlaceholderAPI]
+softdepend: [CMI]
+authors: [lovelace]
+description: Advanced anchor-based claiming system.
+commands:
+  ac:
+    description: Основная команда приватов
+    aliases: [ claim, advancedclaims ]
+  rental:
+    description: Управление арендой
+    aliases: [ rent ]
+permissions:
+  advancedclaims.admin:
+    description: Доступ к /ac admin
+    default: op
+  advancedclaims.bypass:
+    description: Игнорирование защиты ВСЕХ приватов
+    default: op
+  advancedclaims.moderator:
+    description: Доступ к управлению любыми приватами (модерация)
+    default: op
+  advancedclaims.rental:
+    description: Базовый доступ к аренде
+    default: true
+  advancedclaims.rental.admin:
+    description: Администрирование аренды
+    default: op
+  advancedclaims.rental.taxcollector:
+    description: Доступ к налоговому сборщику
+    default: true
+  advancedclaims.expand:
+    default: false
+  advancedclaims.flag.pvp:
+    default: false
+  advancedclaims.flag.msg:
+    default: false
+  advancedclaims.flag.hide:
+    default: false
+  advancedclaims.flag.deny:
+    default: false
+  advancedclaims.flag.enderpearl:
+    default: false
+  advancedclaims.flag.chorus:
+    default: false
+  advancedclaims.flag.elytra:
+    default: false
+  advancedclaims.flag.interact:
+    default: false
+  advancedclaims.flag.haste:
+    default: false
+  advancedclaims.flag.regen:
+    default: false
+  advancedclaims.flag.saturation:
+    default: false
+  advancedclaims.flag.crop_growth:
+    default: false

@@ -1,0 +1,362 @@
+# ====================================================== #
+#               AdvancedClaims - Основной конфиг         #
+# ====================================================== #
+# Плагин для создания приватов с системой квестов, аренды
+# и полной защитой территории.
+# 
+# Версия плагина: 1.0
+# Поддерживаемая версия Minecraft: 1.21+
+# ====================================================== #
+
+# ====================================================== #
+#           НАСТРОЙКИ ОБЫЧНЫХ ПРИВАТОВ (ЯКОРЯ)          #
+# ====================================================== #
+# Якоря - это блоки (костры), которые создают приваты.
+# Игроки могут расширять приваты через квесты.
+claim:
+  # Лимиты участников привата
+  members:
+    default-limit: 5        # Стандартный лимит участников в привате
+    absolute-limit: 24      # Максимально возможный лимит (даже с бонусами)
+  
+  # Названия ролей для отображения в GUI и чате
+  # Порядок важен: NONE < ACCESS < CONTAINER < BUILD < MANAGER < OWNER
+  roles:
+    OWNER: "Владелец"           # Полные права
+    MANAGER: "Менеджер"         # Может открывать GUI и добавлять участников
+    BUILD: "Строитель"          # Установка и разрушение блоков
+    CONTAINER: "Пользователь"   # Использование сундуков, печек
+    ACCESS: "Доступ"            # Двери, кнопки, люки
+    NONE: "Нет"                 # Нет доступа
+
+  # Настройки уровней якорей (тиров)
+  # Каждый тир имеет свой размер и материал
+  tiers:
+    tier-1:
+      material: "CAMPFIRE"      # Блок якоря
+      radius-x: 8               # Радиус по X (размер 17x17)
+      radius-z: 8               # Радиус по Z
+      height: 32                # Высота привата
+      permission: "none"        # Требуемая пермишн (или "none")
+    tier-2:
+      material: "SOUL_CAMPFIRE"
+      radius-x: 16
+      radius-z: 16
+      height: 64
+      permission: "none"
+    tier-3:
+      material: "LANTERN"
+      radius-x: 32
+      radius-z: 32
+      height: 128
+      permission: "none"
+    tier-4:
+      material: "SOUL_LANTERN"
+      radius-x: 64
+      radius-z: 64
+      height: 256
+      permission: "none"
+
+  # Настройки расширения приватов
+  expansion:
+    enabled: true               # Включить ли расширение приватов
+    cost-per-block: 1           # Стоимость 1 очка расширения (в валюте)
+    max-expansion-per-day: 100  # Максимум расширения в день
+
+# ====================================================== #
+#           НАСТРОЙКИ АРЕНДНЫХ УЧАСТКОВ (RENTALS)       #
+# ====================================================== #
+# Арендные участки - это приваты сервера, которые игроки
+# могут арендовать за игровую валюту.
+rental:
+  # Минимальный размер арендного участка (в блоках)
+  min-size: 5                 # Минимум 5x5 блоков
+  
+  # Максимальный размер арендного участка
+  max-size: 50                # Максимум 50x50 блоков
+  
+  # Настройки налогов
+  tax-percentage: 5.0         # Процент от стоимости аренды (налог)
+  tax-days: 3                 # На сколько дней продлевается при оплате
+  
+  # Настройки валюты
+  # Плагин поддерживает многоуровневую валюту с автоматической сдачей.
+  # 
+  # Формат data:
+  # - Число (например "100") - использует CustomModelData как число
+  # - Строка (например "coppercoin") - использует строку в NBT
+  # - "0" - любой предмет этого материала без данных
+  #
+  # Пример команды для выдачи монеты:
+  # /give @p minecraft:copper_ingot[minecraft:custom_model_data={"coppercoin"}]
+  currency:
+    units:
+      # Медная монета = 1 (самая дешевая)
+      - material: "COPPER_INGOT"
+        data: "coppercoin"
+        value: 1
+      
+      # Железная монета = 10
+      - material: "IRON_INGOT"
+        data: "ironcoin"
+        value: 10
+      
+      # Золотая монета = 50
+      - material: "GOLD_INGOT"
+        data: "goldcoin"
+        value: 50
+      
+      # Алмазная монета = 100
+      - material: "DIAMOND"
+        data: "diamondcoin"
+        value: 100
+      
+      # Незеритовая монета = 1000 (самая дорогая)
+      - material: "NETHERITE_INGOT"
+        data: "netheritecoin"
+        value: 1000
+
+  # Индикаторы арендных участков
+  # Показывают статус аренды (свободно/занято)
+  indicators:
+    enabled: true             # Включить индикаторы
+    type: "ARMOR_STAND"       # Тип: ARMOR_STAND, BLOCK_DISPLAY, ITEM_DISPLAY
+    header: "&6&lАРЕНДА УЧАСТКА"  # Заголовок
+    status-rented: "&cАрендовано до: &e{time}"
+    status-available: "&aДоступно для аренды"
+    price-line: "&fЦена: &e{price} очков/сутки"
+
+# ====================================================== #
+#                   ЗАЩИТА СПАВНА                        #
+# ====================================================== #
+# Глобальная защита территории спавна.
+# Не требует якоря, работает автоматически.
+spawn-claim:
+  enabled: true               # Включить ли защиту спавна?
+  world: "world"              # Название мира, где находится спавн
+  x: 0                        # Координата X центра спавна
+  z: 0                        # Координата Z центра спавна
+  radius: 300                 # Радиус защиты спавна (в блоках)
+  say-break-message: true     # Писать ли сообщение при попытке сломать блок?
+  
+  # Глобальные флаги на территории спавна
+  # true = разрешено, false = запрещено
+  flags:
+    break-blocks: false       # Ломать блоки
+    place-blocks: false       # Ставить блоки
+    explosions: false         # Взрывы (криперы, TNT)
+    enderpearl: false         # Телепорт жемчугом
+    chorus: false             # Телепорт корусом
+    elytra: false             # Полеты на элитрах
+    pvp: false                # PvP бой
+
+# ====================================================== #
+#                  НАСТРОЙКИ ГРАНИЦ                      #
+# ====================================================== #
+# Визуализация границ привата при телепортации или команде.
+border:
+  # Материал для отображения границ привата
+  # Доступные варианты:
+  # - GREEN_STAINED_GLASS (зеленое стекло)
+  # - LIME_STAINED_GLASS (салатовое стекло)
+  # - LIGHT_BLUE_STAINED_GLASS (голубое стекло)
+  # - WHITE_STAINED_GLASS (белое стекло)
+  material: "GREEN_STAINED_GLASS"
+  
+  # Использовать ли обычные блоки вместо entity
+  # true = обычные блоки стекла (производительнее)
+  # false = BlockDisplay entities с текстурой (красивее)
+  use-glass-blocks: false
+  
+  # Показывать ли светящийся эффект (Glowing)
+  # true = блоки будут светиться в темноте
+  # (работает только с use-glass-blocks: false)
+  glowing: true
+  
+  # Цвет свечения (для совместимости)
+  # Доступные: GREEN, BLUE, RED, YELLOW, WHITE
+  glow-color: "GREEN"
+  
+  # Время отображения границ (в тиках)
+  # 20 тиков = 1 секунда
+  # 200 тиков = 10 секунд
+  display-duration: 200
+  
+  # Использовать ли entity blocks для визуализации
+  # true = использует BlockDisplay entities (производительнее)
+  # false = использует sendMultiBlockChange (совместимость)
+  use-entity-blocks: true
+  
+  # Максимальное количество блоков для отображения
+  # Ограничение для производительности
+  max-blocks: 5000
+
+# ====================================================== #
+#                     ЗВУКИ ПЛАГИНА                      #
+# ====================================================== #
+# Звуки для различных событий плагина.
+# 
+# ===== ОТКЛЮЧЕНИЕ ЗВУКОВ =====
+# Чтобы отключить звук, установите значение "NONE" (без кавычек):
+#   gui-click: "NONE"  # Звук отключён
+# 
+# ===== ПЕРЕОПРЕДЕЛЕНИЕ ЗВУКОВ =====
+# Вы можете изменить любой звук на свой:
+#   gui-click: "UI_BUTTON_CLICK"  # Стандартный клик
+#   gui-click: "BLOCK_NOTE_BLOCK_PLING"  # Другой звук
+# 
+# ===== НАСТРОЙКА ГРОМКОСТИ =====
+# Громкость и высота звука настраиваются в коде плагина.
+# По умолчанию: громкость 1.0, высота 1.0
+# 
+# Список всех звуков: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Sound.html
+# 
+# Категории звуков:
+# - UI_: звуки интерфейса
+# - BLOCK_: звуки блоков
+# - ENTITY_: звуки существ
+# - ITEM_: звуки предметов
+# - AMBIENCE_: фоновые звуки
+# - MUSIC_: музыка
+# - RECORD_: музыкальные диски
+sounds:
+  # ===== GUI ЗВУКИ =====
+  gui-click: "UI_BUTTON_CLICK"           # Клик в GUI
+  gui-error: "ENTITY_VILLAGER_NO"         # Ошибка в GUI
+  gui-open: "BLOCK_CHEST_OPEN"            # Открытие GUI
+  gui-close: "BLOCK_CHEST_CLOSE"          # Закрытие GUI
+  gui-scroll: "UI_BUTTON_CLICK"           # Прокрутка в GUI
+  
+  # ===== ЗВУКИ ЯКОРЕЙ =====
+  anchor-place: "BLOCK_BEACON_ACTIVATE"   # Установка якоря
+  anchor-error: "BLOCK_NOTE_BLOCK_BASS"   # Ошибка якоря
+  anchor-break: "BLOCK_NOTE_BLOCK_BASS"   # Разрушение якоря
+  anchor-claim-create: "BLOCK_BEACON_ACTIVATE"  # Создание привата
+  anchor-claim-delete: "BLOCK_END_PORTAL_SPAWN"  # Удаление привата
+  
+  # ===== ЗВУКИ НАЛОГОВ И ОПЛАТЫ =====
+  tax-paid: "ENTITY_PLAYER_LEVELUP"       # Оплата налога
+  tax-failed: "BLOCK_NOTE_BLOCK_BASS"     # Неудачная оплата
+  rental-purchase: "ENTITY_PLAYER_LEVELUP"  # Покупка аренды
+  rental-expire: "BLOCK_NOTE_BLOCK_BASS"  # Истечение аренды
+  insufficient-funds: "ENTITY_VILLAGER_NO"  # Недостаточно средств
+  
+  # ===== ЗВУКИ КВЕСТОВ =====
+  quest-complete: "UI_TOAST_CHALLENGE_COMPLETE"  # Квест завершен
+  quest-progress: "ENTITY_EXPERIENCE_ORB_PICKUP"  # Прогресс квеста
+  quest-fail: "BLOCK_NOTE_BLOCK_BASS"     # Квест провален
+  
+  # ===== ЗВУКИ ТЕЛЕПОРТАЦИИ =====
+  teleport: "ENTITY_ENDERMAN_TELEPORT"    # Телепортация
+  teleport-home: "BLOCK_END_PORTAL_TRAVEL"  # Телепорт домой
+  teleport-denied: "BLOCK_NOTE_BLOCK_BASS"  # Телепорт запрещён
+  
+  # ===== ЗВУКИ ГРАНИЦ =====
+  border-show: "BLOCK_NOTE_BLOCK_PLING"   # Показ границ
+  border-hide: "BLOCK_NOTE_BLOCK_BASS"    # Скрытие границ
+  
+  # ===== ЗВУКИ УВЕДОМЛЕНИЙ =====
+  notification: "BLOCK_NOTE_BLOCK_PLING"  # Уведомление
+  warning: "BLOCK_NOTE_BLOCK_BASS"        # Предупреждение
+  success: "ENTITY_PLAYER_LEVELUP"        # Успех
+  error: "ENTITY_VILLAGER_NO"             # Ошибка
+  
+  # ===== ЗВУКИ ПРИВЕТСТВИЯ =====
+  welcome: "BLOCK_BEACON_ACTIVATE"        # Приветствие игрока
+  goodbye: "BLOCK_NOTE_BLOCK_BASS"        # Прощание
+  
+  # ===== ЗВУКИ КОМАНД =====
+  command-success: "ENTITY_PLAYER_LEVELUP"  # Команда выполнена
+  command-fail: "BLOCK_NOTE_BLOCK_BASS"   # Команда не выполнена
+  command-cooldown: "BLOCK_NOTE_BLOCK_BASS"  # Перезарядка команды
+  
+  # ===== ЗВУКИ СОБЫТИЙ =====
+  event-start: "BLOCK_BEACON_ACTIVATE"    # Начало события
+  event-end: "BLOCK_END_PORTAL_SPAWN"     # Конец события
+  event-join: "ENTITY_PLAYER_LEVELUP"     # Присоединение к событию
+  event-leave: "BLOCK_NOTE_BLOCK_BASS"    # Выход из события
+  
+  # ===== ЗВУКИ ИНВЕНТАРЯ =====
+  inventory-open: "BLOCK_CHEST_OPEN"      # Открытие инвентаря
+  inventory-close: "BLOCK_CHEST_CLOSE"    # Закрытие инвентаря
+  item-pickup: "ENTITY_ITEM_PICKUP"       # Подбор предмета
+  item-drop: "ENTITY_ITEM_THROW"          # Бросок предмета
+  
+  # ===== ЗВУКИ БОЯ =====
+  pvp-hit: "ENTITY_PLAYER_HURT"           # Удар по игроку
+  pvp-kill: "ENTITY_PLAYER_DEATH"         # Смерть игрока
+  mob-kill: "ENTITY_PLAYER_LEVELUP"       # Убийство моба
+  
+  # ===== ЗВУКИ ТОРГОВЛИ =====
+  trade: "ENTITY_VILLAGER_TRADE"          # Торговля
+  trade-success: "ENTITY_PLAYER_LEVELUP"  # Успешная торговля
+  trade-fail: "ENTITY_VILLAGER_NO"        # Неудачная торговля
+  
+  # ===== КАСТОМНЫЕ ЗВУКИ (для якорей) =====
+  # Эти звуки используются в anchors.yml
+  anchor-tier-1-place: "BLOCK_BEACON_ACTIVATE"
+  anchor-tier-1-break: "BLOCK_NOTE_BLOCK_BASS"
+  anchor-tier-2-place: "BLOCK_SOUL_SPAWN_PLACE"
+  anchor-tier-2-break: "BLOCK_SOUL_SPAWN_BREAK"
+  anchor-tier-3-place: "BLOCK_BELL_USE"
+  anchor-tier-3-break: "BLOCK_BELL_RESONATE"
+  anchor-tier-4-place: "BLOCK_BEACON_ACTIVATE"
+  anchor-tier-4-break: "BLOCK_BEACON_DEACTIVATE"
+  anchor-tier-5-place: "ENTITY_ENDER_DRAGON_GROWL"
+  anchor-tier-5-break: "ENTITY_ENDER_DRAGON_DEATH"
+  anchor-tier-6-place: "UI_TOAST_CHALLENGE_COMPLETE"
+  anchor-tier-6-break: "BLOCK_END_PORTAL_SPAWN"
+
+# ====================================================== #
+#                   АВТОСОХРАНЕНИЕ                       #
+# ====================================================== #
+# Настройки автоматического сохранения данных.
+auto-save:
+  enabled: true               # Включить автосохранение
+  interval-minutes: 5         # Интервал сохранения (в минутах)
+  save-on-logout: true        # Сохранять при выходе игрока
+  save-on-shutdown: true      # Сохранять при выключении сервера
+
+# ====================================================== #
+#                   ИНТЕГРАЦИИ                           #
+# ====================================================== #
+# Настройки интеграции с другими плагинами.
+integrations:
+  # PlaceholderAPI - поддержка плейсхолдеров
+  placeholderapi:
+    enabled: true             # Включить интеграцию
+    # Доступные плейсхолдеры:
+    # %advancedclaims_claim_name% - Название привата
+    # %advancedclaims_claim_owner% - Владелец привата
+    # %advancedclaims_claim_members% - Количество участников
+    # %advancedclaims_claim_size% - Размер привата
+    # %advancedclaims_quest_progress% - Прогресс квеста
+    # %advancedclaims_quest_completed% - Завершенные квесты
+  
+  # Vault - поддержка экономики
+  vault:
+    enabled: false            # Включить Vault (пока не используется)
+  
+  # WorldGuard - совместимость с регионами
+  worldguard:
+    enabled: false            # Включить WorldGuard
+
+# ====================================================== #
+#                   РАЗНЫЕ НАСТРОЙКИ                     #
+# ====================================================== #
+misc:
+  # Префикс плагина в сообщениях
+  prefix: "<dark_gray>[<gold>AC<dark_gray>] <white>"
+  
+  # Язык сообщений
+  # Доступные: ru (русский), en (английский)
+  language: "ru"
+  
+  # Проверка обновлений
+  check-updates: false         # Проверять обновления при старте
+  
+  # Метрики (bStats)
+  metrics: false               # Отправлять анонимную статистику
+  
+  # Отладка
+  debug: false                # Режим отладки (логирование)
