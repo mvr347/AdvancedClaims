@@ -14,11 +14,11 @@ public class RentalPlayerGUI extends AbstractGUI {
     private final Claim plot;
 
     public RentalPlayerGUI(AdvancedClaims plugin, Player viewer, Claim plot) {
-        super(9, plugin.getConfigManager().getComponent("rental-player.title", "name", plot.getName()));
+        super(9, plugin.getConfigManager().getComponent("gui.rental-player.title", "name", plot.getName()));
         this.plugin = plugin;
         this.viewer = viewer;
         this.plot = plot;
-        this.inventory = Bukkit.createInventory(this, InventoryType.HOPPER, plugin.getConfigManager().getComponent("rental-player.title", "name", plot.getName()));
+        this.inventory = Bukkit.createInventory(this, InventoryType.HOPPER, plugin.getConfigManager().getComponent("gui.rental-player.title", "name", plot.getName()));
         setMenuItems();
     }
 
@@ -38,19 +38,19 @@ public class RentalPlayerGUI extends AbstractGUI {
 
         // Слот 0: Инфо
         inventory.setItem(0, createHead(HEAD_INFO,
-                plugin.getConfigManager().getComponent("rental-edit.info-name"),
-                plugin.getConfigManager().getHelpMessage("rental-player.info-lore", "owner", ownerName, "days", String.valueOf(days), "hours", String.valueOf(hours))));
+                plugin.getConfigManager().getComponent("gui.rental-player.info-name"),
+                plugin.getConfigManager().getHelpMessage("gui.rental-player.info-lore", "owner", ownerName, "days", String.valueOf(days), "hours", String.valueOf(hours))));
 
         // Слот 2: Участники
         inventory.setItem(2, createHead(HEAD_MEMBERS,
-                plugin.getConfigManager().getComponent("main.members-name"),
-                plugin.getConfigManager().getHelpMessage("rental-player.members-lore", "count", String.valueOf(plot.getMembers().size()), "max", "10")));
+                plugin.getConfigManager().getComponent("gui.rental-player.members-title"),
+                plugin.getConfigManager().getHelpMessage("gui.rental-player.members-lore-1", "count", String.valueOf(plot.getMembers().size()), "max", "10")));
 
         // Слот 4: Отказаться (Открывает подтверждение)
         if (plot.getOwnerUuid() != null && plot.getOwnerUuid().equals(viewer.getUniqueId())) {
             inventory.setItem(4, createHead(HEAD_BARRIER,
-                    plugin.getConfigManager().getComponent("rental-player.refuse-btn"),
-                    plugin.getConfigManager().getHelpMessage("rental-player.refuse-lore")));
+                    plugin.getConfigManager().getComponent("gui.rental-player.refuse-name"),
+                    plugin.getConfigManager().getHelpMessage("gui.rental-player.refuse-lore-1")));
         }
 
         fillEmptySlots();
@@ -67,8 +67,9 @@ public class RentalPlayerGUI extends AbstractGUI {
                 viewer.closeInventory();
                 double x = (plot.getBoundingBox().getMinX() + plot.getBoundingBox().getMaxX()) / 2.0;
                 double z = (plot.getBoundingBox().getMinZ() + plot.getBoundingBox().getMaxZ()) / 2.0;
-                // Получаем мир из якоря привата
-                org.bukkit.World targetWorld = plot.getAnchorLocation().getWorld();
+                
+                // Для арендного плота берем мир из него самого
+                org.bukkit.World targetWorld = plot.getWorld();
                 if (targetWorld != null) {
                     double y = targetWorld.getHighestBlockYAt((int)x, (int)z) + 1;
                     viewer.teleport(new org.bukkit.Location(targetWorld, x, y, z));
@@ -81,7 +82,6 @@ public class RentalPlayerGUI extends AbstractGUI {
         }
         if (slot == 2) {
             plugin.getConfigManager().playSound(viewer, "gui-click");
-            // ИСПРАВЛЕНИЕ: Открываем RentalMembersGUI вместо обычного MembersGUI
             viewer.openInventory(new RentalMembersGUI(plugin, viewer, plot).getInventory());
         }
         if (slot == 4 && plot.getOwnerUuid() != null && plot.getOwnerUuid().equals(viewer.getUniqueId())) {

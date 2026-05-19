@@ -71,8 +71,7 @@ public class PlayerMoveListener implements Listener {
                     } else {
                         player.teleport(from); // Если это был телепорт - возвращаем назад
                     }
-                    String str = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(plugin.getConfigManager().getMessage("deny-entry"));
-                    player.sendActionBar(str);
+                    player.sendActionBar(plugin.getConfigManager().getMessage("deny-entry"));
                     return;
                 }
             }
@@ -90,29 +89,37 @@ public class PlayerMoveListener implements Listener {
     }
 
     private void sendClaimMessage(Player player, Claim claim, boolean enter) {
-        String ownerName = "Сервер";
-        if (claim.getOwnerUuid() != null) {
-            String fetchedName = Bukkit.getOfflinePlayer(claim.getOwnerUuid()).getName();
-            if (fetchedName != null) ownerName = fetchedName;
-        }
+        String ownerName;
+        String claimDisplayName;
 
-        String claimName = claim.getName() != null ? claim.getName() : "Участок";
+        if (claim.isClanTerritory()) {
+            // Для клановых территорий используем имя, установленное через API, или дефолтное из конфига
+            claimDisplayName = claim.getName() != null ? claim.getName() : plugin.getConfigManager().getString("misc.clan-claim-display-name", "Клановая Территория");
+            ownerName = plugin.getConfigManager().getString("misc.clan-owner-display-name", "Клан");
+        } else {
+            // Логика для обычных приватов
+            ownerName = "Сервер";
+            if (claim.getOwnerUuid() != null) {
+                String fetchedName = Bukkit.getOfflinePlayer(claim.getOwnerUuid()).getName();
+                if (fetchedName != null) ownerName = fetchedName;
+            }
+            claimDisplayName = claim.getName() != null ? claim.getName() : "Участок";
+        }
 
         if (claim.getFlag(ClaimFlag.MSG_SCREEN)) {
             Component titleComp = enter ?
-                    plugin.getConfigManager().getComponent("title-enter", "name", claimName, "owner", ownerName) :
-                    plugin.getConfigManager().getComponent("title-leave", "name", claimName, "owner", ownerName);
+                    plugin.getConfigManager().getComponent("title-enter", "name", claimDisplayName, "owner", ownerName) :
+                    plugin.getConfigManager().getComponent("title-leave", "name", claimDisplayName, "owner", ownerName);
 
-            String titleStr = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(titleComp);
-            player.sendTitle(titleStr, "", 10, 40, 10);
+            Title title = Title.title(titleComp, Component.empty(), Title.Times.times(Duration.ofMillis(250), Duration.ofMillis(2000), Duration.ofMillis(250)));
+            player.showTitle(title);
         }
 
         if (claim.getFlag(ClaimFlag.MSG_ACTIONBAR)) {
             Component actionbarComp = enter ?
-                    plugin.getConfigManager().getComponent("actionbar-enter", "name", claimName, "owner", ownerName) :
-                    plugin.getConfigManager().getComponent("actionbar-leave", "name", claimName, "owner", ownerName);
-            String actionbarStr = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(actionbarComp);
-            player.sendActionBar(actionbarStr);
+                    plugin.getConfigManager().getComponent("actionbar-enter", "name", claimDisplayName, "owner", ownerName) :
+                    plugin.getConfigManager().getComponent("actionbar-leave", "name", claimDisplayName, "owner", ownerName);
+            player.sendActionBar(actionbarComp);
         }
     }
 }

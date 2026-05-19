@@ -29,6 +29,10 @@ public class ClaimManager {
     private final Map<UUID, List<Claim>> claimsByPlayer = new ConcurrentHashMap<>();
     // Кэш арендных приватов
     private final List<Claim> rentalPlotsCache = new CopyOnWriteArrayList<>();
+    // Кэш клановых приватов: UUID клана → Claim
+    private final Map<UUID, Claim> clanClaimsCache = new ConcurrentHashMap<>();
+    // Кэш всех клановых приватов (для getAllClanClaims)
+    private final List<Claim> allClanClaimsCache = new CopyOnWriteArrayList<>();
     
     // ===== ВРЕМЕННЫЕ КЭШИ (Caffeine) =====
     // Кэш профилей UserData (истекает через 10 минут после последнего доступа)
@@ -79,13 +83,22 @@ public class ClaimManager {
             claimsByOwner.clear();
             claimsByPlayer.clear();
             rentalPlotsCache.clear();
+            clanClaimsCache.clear();
+            allClanClaimsCache.clear(); // Очищаем новый кэш
             
             for (Claim claim : loadedClaims) {
                 addClaimToCacheInternal(claim);
             }
             
-            // Ребилд кэша игроков после загрузки всех приватов
-            rebuildPlayerClaimsCache();
+            // При загрузке всех приватов, кэши claimsByOwner и claimsByPlayer будут заполнены
+            // через addClaimToCacheInternal.
+            // Однако, для обеспечения полной консистентности, особенно если логика добавления
+            // в claimsByPlayer сложнее, чем просто владелец + члены, можно оставить rebuildPlayerClaimsCache()
+            // здесь, но не вызывать его при одиночном добавлении/удалении.
+            // В текущей реализации, где claimsByPlayer заполняется в addClaimToCacheInternal,
+            // этот вызов rebuildPlayerClaimsCache() здесь избыточен, но безопасен.
+            // Для максимальной производительности при старте, можно было бы оптимизировать
+            // заполнение claimsByPlayer здесь, но пока оставим так.
         } finally {
             lock.writeLock().unlock();
         }
@@ -107,39 +120,48 @@ public class ClaimManager {
         // Обновляем кэш владельца
         if (claim.getOwnerUuid() != null) {
             claimsByOwner.computeIfAbsent(claim.getOwnerUuid(), k -> new CopyOnWriteArrayList<>()).add(claim);
+            claimsByPlayer.computeIfAbsent(claim.getOwnerUuid(), k -> new CopyOnWriteArrayList<>()).add(claim); // Добавляем владельца в кэш игроков
+            
+            // Обновляем кэш кланов
+            if (claim.getClaimType() == Claim.ClaimType.CLAN) {
+                clanClaimsCache.put(claim.getOwnerUuid(), claim);
+                allClanClaimsCache.add(claim); // Добавляем в кэш всех клановых приватов
+            }
         }
         
+        // Обновляем кэш участников
+        for (UUID memberId : claim.getMembers().keySet()) {
+            claimsByPlayer.computeIfAbsent(memberId, k -> new CopyOnWriteArrayList<>()).add(claim);
+        }
+
         // Обновляем кэш арендных приватов
         if (claim.isRentalPlot()) {
             rentalPlotsCache.add(claim);
         }
         
-        // Ребилд кэша игроков (медленно, но надежно)
-        rebuildPlayerClaimsCache();
-
         Long2ObjectOpenHashMap<List<Claim>> chunkMap = worldCaches.computeIfAbsent(
                 claim.getWorld().getUID(),
                 k -> new Long2ObjectOpenHashMap<>()
         );
 
         BoundingBox box = claim.getBoundingBox();
-        int minCX = (int) Math.floor(box.getMinX()) >> 4;
-        int maxCX = (int) Math.floor(box.getMaxX()) >> 4;
-        int minCZ = (int) Math.floor(box.getMinZ()) >> 4;
-        int maxCZ = (int) Math.floor(box.getMaxZ()) >> 4;
+        int minCX = (int) Math.floor(box.getMinX());
+        int maxCX = (int) Math.floor(box.getMaxX());
+        int minCZ = (int) Math.floor(box.getMinZ());
+        int maxCZ = (int) Math.floor(box.getMaxZ());
 
-        for (int x = minCX; x <= maxCX; x++) {
-            for (int z = minCZ; z <= maxCZ; z++) {
+        for (int x = minCX >> 4; x <= maxCX >> 4; x++) {
+            for (int z = minCZ >> 4; z <= maxCZ >> 4; z++) {
                 long chunkKey = getChunkKey(x, z);
                 chunkMap.computeIfAbsent(chunkKey, k -> new CopyOnWriteArrayList<>()).add(claim);
             }
         }
     }
     
-    /**
-     * Перестроить кэш приватов по игрокам.
-     * Вызывается при загрузке всех приватов.
-     */
+    // Метод rebuildPlayerClaimsCache() больше не нужен для одиночных операций,
+    // но может быть полезен при полной загрузке, если логика claimsByPlayer сложнее.
+    // Пока оставим его, но не будем вызывать в addClaimToCacheInternal/removeClaimFromCache.
+    /*
     private void rebuildPlayerClaimsCache() {
         claimsByPlayer.clear();
         for (Claim claim : claimsById.values()) {
@@ -153,6 +175,7 @@ public class ClaimManager {
             }
         }
     }
+    */
 
     public void removeClaimFromCache(UUID claimId) {
         lock.writeLock().lock();
@@ -160,7 +183,6 @@ public class ClaimManager {
             Claim claim = claimsById.remove(claimId);
             if (claim == null || claim.getWorld() == null) return;
 
-            // ===== ИСПРАВЛЕНИЕ: Удаляем из всех кэшей =====
             // Удаляем из кэша владельца
             if (claim.getOwnerUuid() != null) {
                 List<Claim> ownerClaims = claimsByOwner.get(claim.getOwnerUuid());
@@ -170,31 +192,50 @@ public class ClaimManager {
                         claimsByOwner.remove(claim.getOwnerUuid());
                     }
                 }
+                
+                // Удаляем из кэша кланов
+                if (claim.getClaimType() == Claim.ClaimType.CLAN) {
+                    clanClaimsCache.remove(claim.getOwnerUuid());
+                    allClanClaimsCache.remove(claim); // Удаляем из кэша всех клановых приватов
+                }
             }
 
             // Удаляем из кэша игроков (владелец + все участники)
-            updatePlayerClaimsCache(claim.getOwnerUuid());
+            if (claim.getOwnerUuid() != null) {
+                List<Claim> playerClaims = claimsByPlayer.get(claim.getOwnerUuid());
+                if (playerClaims != null) {
+                    playerClaims.remove(claim);
+                    if (playerClaims.isEmpty()) {
+                        claimsByPlayer.remove(claim.getOwnerUuid());
+                    }
+                }
+            }
             for (UUID memberId : claim.getMembers().keySet()) {
-                updatePlayerClaimsCache(memberId);
+                List<Claim> playerClaims = claimsByPlayer.get(memberId);
+                if (playerClaims != null) {
+                    playerClaims.remove(claim);
+                    if (playerClaims.isEmpty()) {
+                        claimsByPlayer.remove(memberId);
+                    }
+                }
             }
 
             // Удаляем из кэша арендных приватов
             if (claim.isRentalPlot()) {
                 rentalPlotsCache.remove(claim);
             }
-            // ===== КОНЕЦ ИСПРАВЛЕНИЯ =====
 
             Long2ObjectOpenHashMap<List<Claim>> chunkMap = worldCaches.get(claim.getWorld().getUID());
             if (chunkMap == null) return;
 
             BoundingBox box = claim.getBoundingBox();
-            int minCX = (int) Math.floor(box.getMinX()) >> 4;
-            int maxCX = (int) Math.floor(box.getMaxX()) >> 4;
-            int minCZ = (int) Math.floor(box.getMinZ()) >> 4;
-            int maxCZ = (int) Math.floor(box.getMaxZ()) >> 4;
+            int minCX = (int) Math.floor(box.getMinX());
+            int maxCX = (int) Math.floor(box.getMaxX());
+            int minCZ = (int) Math.floor(box.getMinZ());
+            int maxCZ = (int) Math.floor(box.getMaxZ());
 
-            for (int x = minCX; x <= maxCX; x++) {
-                for (int z = minCZ; z <= maxCZ; z++) {
+            for (int x = minCX >> 4; x <= maxCX >> 4; x++) {
+                for (int z = minCZ >> 4; z <= maxCZ >> 4; z++) {
                     long chunkKey = getChunkKey(x, z);
                     List<Claim> list = chunkMap.get(chunkKey);
                     if (list != null) {
@@ -255,18 +296,18 @@ public class ClaimManager {
 
     public boolean checkOverlap(World world, BoundingBox box, UUID ignoreClaimId) {
         if (world == null) return false;
-        int minCX = (int) Math.floor(box.getMinX()) >> 4;
-        int maxCX = (int) Math.floor(box.getMaxX()) >> 4;
-        int minCZ = (int) Math.floor(box.getMinZ()) >> 4;
-        int maxCZ = (int) Math.floor(box.getMaxZ()) >> 4;
+        int minCX = (int) Math.floor(box.getMinX());
+        int maxCX = (int) Math.floor(box.getMaxX());
+        int minCZ = (int) Math.floor(box.getMinZ());
+        int maxCZ = (int) Math.floor(box.getMaxZ());
 
         lock.readLock().lock();
         try {
             Long2ObjectOpenHashMap<List<Claim>> chunkMap = worldCaches.get(world.getUID());
             if (chunkMap == null) return false;
 
-            for (int x = minCX; x <= maxCX; x++) {
-                for (int z = minCZ; z <= maxCZ; z++) {
+            for (int x = minCX >> 4; x <= maxCX >> 4; x++) {
+                for (int z = minCZ >> 4; z <= maxCZ >> 4; z++) {
                     long chunkKey = getChunkKey(x, z);
                     List<Claim> claimsInChunk = chunkMap.get(chunkKey);
                     if (claimsInChunk != null) {
@@ -317,11 +358,27 @@ public class ClaimManager {
     public List<Claim> getAllRentalPlots() {
         return Collections.unmodifiableList(rentalPlotsCache);
     }
-    
+
     /**
-     * Обновить кэш игрока (при изменении прав доступа).
-     * @param playerUuid UUID игрока
+     * Получить клановый приват по ID клана (O(1)).
+     * @param clanId ID клана
+     * @return Optional с приватом
      */
+    public Optional<Claim> getClanClaimByClanId(UUID clanId) {
+        if (clanId == null) return Optional.empty();
+        return Optional.ofNullable(clanClaimsCache.get(clanId));
+    }
+
+    /**
+     * Получить все клановые приваты (O(1)).
+     * @return Список всех клановых приватов
+     */
+    public List<Claim> getAllClanClaims() {
+        return Collections.unmodifiableList(allClanClaimsCache);
+    }
+    
+    // Метод updatePlayerClaimsCache() больше не нужен, так как кэши обновляются напрямую.
+    /*
     public void updatePlayerClaimsCache(UUID playerUuid) {
         claimsByPlayer.remove(playerUuid);
         List<Claim> playerClaims = new ArrayList<>();
@@ -336,6 +393,7 @@ public class ClaimManager {
             claimsByPlayer.put(playerUuid, new CopyOnWriteArrayList<>(playerClaims));
         }
     }
+    */
 
     // ===== МЕТОДЫ ДЛЯ CAFFEINE КЭШЕЙ =====
     

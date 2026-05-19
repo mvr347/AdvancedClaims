@@ -47,7 +47,7 @@ public class AnchorManager {
             try {
                 // Чтение материала
                 String materialName = section.getString(key + ".material", "CAMPFIRE");
-                Material material = Material.matchMaterial(materialName);
+                Material material = Material.getMaterial(materialName.toUpperCase());
                 if (material == null) {
                     plugin.getLogger().warning("Invalid material '" + materialName + "' for tier " + key + ", using CAMPFIRE");
                     material = Material.CAMPFIRE;

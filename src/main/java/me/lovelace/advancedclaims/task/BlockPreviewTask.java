@@ -39,7 +39,7 @@ public class BlockPreviewTask {
     private ScheduledTask task;
 
     // Текстура для голов (зеленое стекло)
-    private static final String GREEN_GLASS_TEXTURE = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMjMxMmUxYjkzZTM1NDRkMGVkMDFlMDQ3MTZlNWUyZjNlYThlZDc5OWFlMDI1M2U0YjE4MjRkZThiMzAwMmY2NCJ9fX0=";
+    private static final String GREEN_GLASS_TEXTURE = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNjQ5NjAxMTMwNzNiNTIwNDRkNzA3OTk2NTQxOTYyMTkyMjMxOGE5ZTk5ZDc2NzE3MGIxNDI4ZGVkNDhjN2NlNSJ9fX0=";
 
     public BlockPreviewTask(AdvancedClaims plugin, Player player, BoundingBox box, ClaimTier tier, Runnable onCancel) {
         this.plugin = plugin;

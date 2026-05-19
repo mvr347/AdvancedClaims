@@ -4,6 +4,10 @@ import me.lovelace.advancedclaims.AdvancedClaims;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
+import org.bukkit.Sound;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -11,6 +15,7 @@ import org.bukkit.entity.Player;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class ConfigManager {
     private final AdvancedClaims plugin;
@@ -96,6 +101,20 @@ public class ConfigManager {
         return language;
     }
     
+    public boolean isUseEntityBlocks() {
+        return config.getBoolean("border.use-entity-blocks", true);
+    }
+
+    public Material getBorderMaterial() {
+        String matName = config.getString("border.material", "BARRIER");
+        Material mat = Material.getMaterial(matName.toUpperCase());
+        return mat != null ? mat : Material.BARRIER;
+    }
+
+    public boolean isBorderGlowing() {
+        return config.getBoolean("border.glowing", true);
+    }
+
     /**
      * Логирование в режиме отладки.
      * @param message Сообщение для логирования
@@ -116,6 +135,14 @@ public class ConfigManager {
         }
     }
 
+    private Optional<Sound> getSound(String soundKey) {
+        String soundName = config.getString("sounds." + soundKey, "NONE");
+        if (soundName.equalsIgnoreCase("NONE") || soundName.trim().isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(Registry.SOUNDS.get(NamespacedKey.minecraft(soundName.toLowerCase())));
+    }
+
     /**
      * Воспроизвести звук игроку.
      * Если звук установлен в "NONE" - ничего не происходит.
@@ -124,19 +151,7 @@ public class ConfigManager {
      * @param soundKey Ключ звука в конфиге (например, "gui-click")
      */
     public void playSound(Player player, String soundKey) {
-        String soundName = config.getString("sounds." + soundKey, "NONE");
-        
-        // Проверка на NONE - не воспроизводить звук
-        if (soundName.equalsIgnoreCase("NONE") || soundName.trim().isEmpty()) {
-            return;
-        }
-        
-        try {
-            org.bukkit.Sound sound = org.bukkit.Sound.valueOf(soundName.toUpperCase());
-            player.playSound(player.getLocation(), sound, 1f, 1f);
-        } catch (IllegalArgumentException e) {
-            plugin.getLogger().warning("Invalid sound '" + soundName + "' for key '" + soundKey + "'");
-        }
+        getSound(soundKey).ifPresent(sound -> player.playSound(player.getLocation(), sound, 1f, 1f));
     }
 
     /**
@@ -149,19 +164,7 @@ public class ConfigManager {
      * @param pitch Высота (0.5-2.0)
      */
     public void playSound(Player player, String soundKey, float volume, float pitch) {
-        String soundName = config.getString("sounds." + soundKey, "NONE");
-        
-        // Проверка на NONE - не воспроизводить звук
-        if (soundName.equalsIgnoreCase("NONE") || soundName.trim().isEmpty()) {
-            return;
-        }
-        
-        try {
-            org.bukkit.Sound sound = org.bukkit.Sound.valueOf(soundName.toUpperCase());
-            player.playSound(player.getLocation(), sound, volume, pitch);
-        } catch (IllegalArgumentException e) {
-            plugin.getLogger().warning("Invalid sound '" + soundName + "' for key '" + soundKey + "'");
-        }
+        getSound(soundKey).ifPresent(sound -> player.playSound(player.getLocation(), sound, volume, pitch));
     }
 
     /**
@@ -173,19 +176,11 @@ public class ConfigManager {
      * @param radius Радиус (в блоках)
      */
     public void playSoundForNearby(org.bukkit.Location location, String soundKey, double radius) {
-        String soundName = config.getString("sounds." + soundKey, "NONE");
-        
-        // Проверка на NONE - не воспроизводить звук
-        if (soundName.equalsIgnoreCase("NONE") || soundName.trim().isEmpty()) {
-            return;
-        }
-        
-        try {
-            org.bukkit.Sound sound = org.bukkit.Sound.valueOf(soundName.toUpperCase());
-            location.getWorld().playSound(location, sound, 1f, 1f);
-        } catch (IllegalArgumentException e) {
-            plugin.getLogger().warning("Invalid sound '" + soundName + "' for key '" + soundKey + "'");
-        }
+        getSound(soundKey).ifPresent(sound -> {
+            if (location.getWorld() != null) {
+                location.getWorld().playSound(location, sound, 1f, 1f);
+            }
+        });
     }
 
     /**

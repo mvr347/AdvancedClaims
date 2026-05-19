@@ -4,6 +4,7 @@ import me.lovelace.advancedclaims.model.Claim;
 import me.lovelace.advancedclaims.model.ClaimFlag;
 import me.lovelace.advancedclaims.model.TrustLevel;
 import net.kyori.adventure.text.Component;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -28,9 +29,10 @@ public class ProtectionListener implements Listener {
     }
 
     private void deny(Player player, Claim claim, Component message) {
+        // Если claim == null, это означает, что сообщение идет от спавна или общей защиты
+        // В этом случае флаг SILENT_DENY не применяется
         if (claim == null || !claim.getFlag(ClaimFlag.SILENT_DENY)) {
-            String str = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(message);
-            player.sendActionBar(str);
+            player.sendActionBar(message);
         }
     }
 
@@ -61,8 +63,8 @@ public class ProtectionListener implements Listener {
                     continue;
                 }
 
-                // 2. ЗАЩИТА ТЕРРИТОРИИ: Зависит от флага привата
-                if (!claim.getFlag(ClaimFlag.EXPLOSIONS)) {
+                // 2. ЗАЩИТА ТЕРРИТОРИИ: Зависит от флага привата. Для клановых приватов взрывы всегда запрещены.
+                if (claim.isClanTerritory() || !claim.getFlag(ClaimFlag.EXPLOSIONS)) {
                     it.remove();
                 }
             } else if (isSpawnProtected(block.getLocation())) {
@@ -79,6 +81,42 @@ public class ProtectionListener implements Listener {
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
         if (hasBypass(player)) return;
+
+        Optional<Claim> claimOpt = plugin.getClaimManager().getClaimAt(event.getBlock().getLocation());
+        if (claimOpt.isPresent()) {
+            Claim claim = claimOpt.get();
+
+            // Если приват клановый
+            if (claim.isClanTerritory()) {
+                // Если приват в режиме осады
+                if (claim.isUnderSiege()) {
+                    Location anchorLoc = claim.getAnchorLocation();
+                    // Разрешаем ломать только баннер (якорь)
+                    if (event.getBlock().getLocation().equals(anchorLoc)) {
+                        // TODO: Здесь нужна проверка на принадлежность к вражескому клану
+                        // Пока просто разрешаем ломать баннер, если он в режиме осады
+                        event.setCancelled(false); // Временно разрешаем ломать баннер
+                    } else {
+                        event.setCancelled(true);
+                        deny(player, claim, plugin.getConfigManager().getMessage("siege-break-deny"));
+                    }
+                } else {
+                    // Если не в осаде, то на клановой территории ломать запрещено всем, без сообщения
+                    event.setCancelled(true);
+                    // deny(player, claim, plugin.getConfigManager().getMessage("deny-break")); // Убрано сообщение
+                }
+                return;
+            }
+
+            // Обычная логика привата
+            if (claim.getTrust(player.getUniqueId()).ordinal() < TrustLevel.BUILD.ordinal()) {
+                event.setCancelled(true);
+                deny(player, claim, plugin.getConfigManager().getMessage("deny-break"));
+            }
+            return;
+        }
+
+        // Защита спавна
         if (isSpawnProtected(event.getBlock().getLocation())) {
             if (!plugin.getConfigManager().getSpawnFlag("break-blocks")) {
                 event.setCancelled(true);
@@ -86,21 +124,41 @@ public class ProtectionListener implements Listener {
                     deny(player, null, plugin.getConfigManager().getMessage("deny-break"));
                 }
             }
-            return;
         }
-        Optional<Claim> claimOpt = plugin.getClaimManager().getClaimAt(event.getBlock().getLocation());
-        claimOpt.ifPresent(claim -> {
-            if (claim.getTrust(player.getUniqueId()).ordinal() < TrustLevel.BUILD.ordinal()) {
-                event.setCancelled(true);
-                deny(player, claim, plugin.getConfigManager().getMessage("deny-break"));
-            }
-        });
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
         Player player = event.getPlayer();
         if (hasBypass(player)) return;
+
+        Optional<Claim> claimOpt = plugin.getClaimManager().getClaimAt(event.getBlock().getLocation());
+        if (claimOpt.isPresent()) {
+            Claim claim = claimOpt.get();
+
+            // Если приват клановый
+            if (claim.isClanTerritory()) {
+                // Если приват в режиме осады
+                if (claim.isUnderSiege()) {
+                    event.setCancelled(true);
+                    deny(player, claim, plugin.getConfigManager().getMessage("siege-place-deny"));
+                } else {
+                    // Если не в осаде, то на клановой территории ставить запрещено всем, без сообщения
+                    event.setCancelled(true);
+                    // deny(player, claim, plugin.getConfigManager().getMessage("deny-place")); // Убрано сообщение
+                }
+                return;
+            }
+
+            // Обычная логика привата
+            if (claim.getTrust(player.getUniqueId()).ordinal() < TrustLevel.BUILD.ordinal()) {
+                event.setCancelled(true);
+                deny(player, claim, plugin.getConfigManager().getMessage("deny-place"));
+            }
+            return;
+        }
+
+        // Защита спавна
         if (isSpawnProtected(event.getBlock().getLocation())) {
             if (!plugin.getConfigManager().getSpawnFlag("place-blocks")) {
                 event.setCancelled(true);
@@ -108,22 +166,37 @@ public class ProtectionListener implements Listener {
                     deny(player, null, plugin.getConfigManager().getMessage("deny-place"));
                 }
             }
-            return;
         }
-        Optional<Claim> claimOpt = plugin.getClaimManager().getClaimAt(event.getBlock().getLocation());
-        claimOpt.ifPresent(claim -> {
-            if (claim.getTrust(player.getUniqueId()).ordinal() < TrustLevel.BUILD.ordinal()) {
-                event.setCancelled(true);
-                deny(player, claim, plugin.getConfigManager().getMessage("deny-place"));
-            }
-        });
     }
 
+    // TODO: PlayerTeleportEvent.TeleportCause.CHORUS_FRUIT is deprecated for removal.
+    //  There is no direct replacement in the API as of Paper 1.21.11.
+    //  This implementation is kept for functionality until a new API is provided.
+    @SuppressWarnings("deprecation")
     @EventHandler(ignoreCancelled = true)
     public void onPearlOrChorus(PlayerTeleportEvent event) {
-        if (!hasBypass(event.getPlayer())) return;
+        if (hasBypass(event.getPlayer())) return;
         PlayerTeleportEvent.TeleportCause cause = event.getCause();
         if (cause != PlayerTeleportEvent.TeleportCause.ENDER_PEARL && cause != PlayerTeleportEvent.TeleportCause.CHORUS_FRUIT) return;
+
+        Optional<Claim> claimOpt = plugin.getClaimManager().getClaimAt(event.getTo());
+        if (claimOpt.isPresent()) {
+            Claim claim = claimOpt.get();
+            // Если приват клановый
+            if (claim.isClanTerritory()) {
+                // Если приват в режиме осады, то эндер-перлы и хорус могут быть разрешены (пока запрещаем)
+                if (claim.isUnderSiege()) {
+                    event.setCancelled(true);
+                    deny(event.getPlayer(), claim, plugin.getConfigManager().getMessage("siege-teleport-deny")); // Новое сообщение
+                } else {
+                    // Если не в осаде, то на клановой территории эндер-перлы и хорус запрещены, без сообщения
+                    event.setCancelled(true);
+                    // deny(event.getPlayer(), claim, plugin.getConfigManager().getMessage("deny-pearl")); // Убрано сообщение
+                }
+                return;
+            }
+        }
+
         if (isSpawnProtected(event.getTo())) {
             if (cause == PlayerTeleportEvent.TeleportCause.ENDER_PEARL && !plugin.getConfigManager().getSpawnFlag("enderpearl")) {
                 event.setCancelled(true);
@@ -142,7 +215,34 @@ public class ProtectionListener implements Listener {
         org.bukkit.block.Block block = event.getClickedBlock();
         if (block == null) return;
         Optional<Claim> claimOpt = plugin.getClaimManager().getClaimAt(block.getLocation());
-        claimOpt.ifPresent(claim -> {
+        if (claimOpt.isPresent()) {
+            Claim claim = claimOpt.get();
+
+            // Если приват клановый
+            if (claim.isClanTerritory()) {
+                // Если приват в режиме осады
+                if (claim.isUnderSiege()) {
+                    // Если это якорь (баннер) и игрок не лидер клана, не открываем GUI
+                    if (block.getLocation().equals(claim.getAnchorLocation())) {
+                        // TODO: Здесь нужна проверка на принадлежность к клану игрока
+                        // Пока просто запрещаем открывать GUI, если это не лидер клана
+                        if (!claim.getOwnerUuid().equals(event.getPlayer().getUniqueId())) {
+                            event.setCancelled(true);
+                            deny(event.getPlayer(), claim, plugin.getConfigManager().getMessage("siege-interact-deny"));
+                        }
+                    } else {
+                        event.setCancelled(true);
+                        deny(event.getPlayer(), claim, plugin.getConfigManager().getMessage("siege-interact-deny"));
+                    }
+                } else {
+                    // Если не в осаде, то на клановой территории взаимодействовать запрещено всем, без сообщения
+                    event.setCancelled(true);
+                    // deny(event.getPlayer(), claim, plugin.getConfigManager().getMessage("deny-interact")); // Убрано сообщение
+                }
+                return;
+            }
+
+            // Обычная логика привата
             Material type = block.getType();
             if (isContainerBlock(type)) {
                 if (claim.getTrust(event.getPlayer().getUniqueId()).ordinal() < TrustLevel.BUILD.ordinal()) {
@@ -162,13 +262,32 @@ public class ProtectionListener implements Listener {
                 event.setCancelled(true);
                 deny(event.getPlayer(), claim, plugin.getConfigManager().getMessage("deny-interact"));
             }
-        });
+        }
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onElytra(EntityToggleGlideEvent event) {
         if (!(event.getEntity() instanceof Player player) || !event.isGliding()) return;
         if (hasBypass(player)) return;
+
+        Optional<Claim> claimOpt = plugin.getClaimManager().getClaimAt(player.getLocation());
+        if (claimOpt.isPresent()) {
+            Claim claim = claimOpt.get();
+            // Если приват клановый
+            if (claim.isClanTerritory()) {
+                // Если приват в режиме осады, то элитры могут быть разрешены (пока запрещаем)
+                if (claim.isUnderSiege()) {
+                    event.setCancelled(true);
+                    deny(player, claim, plugin.getConfigManager().getMessage("siege-elytra-deny")); // Новое сообщение
+                } else {
+                    // Если не в осаде, то на клановой территории элитры запрещены, без сообщения
+                    event.setCancelled(true);
+                    // deny(player, claim, plugin.getConfigManager().getMessage("deny-elytra")); // Убрано сообщение
+                }
+                return;
+            }
+        }
+
         if (isSpawnProtected(player.getLocation())) {
             if (!plugin.getConfigManager().getSpawnFlag("elytra")) {
                 event.setCancelled(true);
@@ -182,8 +301,32 @@ public class ProtectionListener implements Listener {
         if (!(event.getEntity() instanceof Player victim) || !(event.getDamager() instanceof Player attacker)) return;
         if (attacker.hasPermission("advancedclaims.bypass") || attacker.hasPermission("advancedclaims.admin")) return;
         Optional<Claim> claimOpt = plugin.getClaimManager().getClaimAt(victim.getLocation());
-        if (claimOpt.isPresent() && !claimOpt.get().getFlag(ClaimFlag.PVP)) {
-            event.setCancelled(true);
+        if (claimOpt.isPresent()) {
+            Claim claim = claimOpt.get();
+
+            // Если приват клановый
+            if (claim.isClanTerritory()) {
+                // PvP всегда разрешено в режиме осады
+                if (claim.isUnderSiege()) {
+                    event.setCancelled(false);
+                } else {
+                    // Если не в осаде, то на клановой территории PvP запрещено, без сообщения
+                    event.setCancelled(true);
+                    // deny(attacker, claim, plugin.getConfigManager().getMessage("deny-pvp")); // Убрано сообщение
+                }
+                return;
+            }
+
+            // Обычная логика привата
+            // Если приват в режиме осады, PvP всегда разрешено
+            if (claim.isUnderSiege()) {
+                event.setCancelled(false);
+                return;
+            }
+            // Обычная логика PvP
+            if (!claim.getFlag(ClaimFlag.PVP)) {
+                event.setCancelled(true);
+            }
         } else if (isSpawnProtected(victim.getLocation()) && !plugin.getConfigManager().getSpawnFlag("pvp")) {
             event.setCancelled(true);
         }
@@ -193,6 +336,13 @@ public class ProtectionListener implements Listener {
     public void onCropGrow(BlockGrowEvent event) {
         Optional<Claim> claimOpt = plugin.getClaimManager().getClaimAt(event.getBlock().getLocation());
         claimOpt.ifPresent(claim -> {
+            // Если приват клановый, перк роста растений не применяется
+            if (claim.isClanTerritory()) {
+                // Ничего не делаем, перк не срабатывает
+                return;
+            }
+
+            // Обычная логика привата
             if (claim.getFlag(ClaimFlag.PERK_CROP_GROWTH)) {
                 org.bukkit.block.data.BlockData data = event.getNewState().getBlockData();
                 if (data instanceof org.bukkit.block.data.Ageable ageable) {

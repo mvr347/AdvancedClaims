@@ -1,13 +1,17 @@
 package me.lovelace.advancedclaims.model;
 
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
+import org.bukkit.Sound;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Модель уровня якоря привата.
  * Определяет параметры для каждого тира якорей.
- * 
+ *
  * @param id              Уникальный идентификатор тира (например, "tier-1")
  * @param material        Материал блока якоря
  * @param name            Название предмета (MiniMessage формат)
@@ -126,26 +130,20 @@ public record ClaimTier(
     }
 
     /**
-     * Получить Material из названия звука установки.
-     * @return Material звука или null
+     * Получить объект Sound из названия звука установки.
+     * @return Sound объект или стандартный звук, если не найден
      */
-    public org.bukkit.Sound getPlaceSoundObject() {
-        try {
-            return org.bukkit.Sound.valueOf(placeSound);
-        } catch (IllegalArgumentException e) {
-            return org.bukkit.Sound.BLOCK_BEACON_ACTIVATE;
-        }
+    public Sound getPlaceSoundObject() {
+        return Optional.ofNullable(Registry.SOUNDS.get(NamespacedKey.minecraft(placeSound.toLowerCase())))
+                .orElse(Sound.BLOCK_BEACON_ACTIVATE);
     }
 
     /**
-     * Получить Material из названия звука удаления.
-     * @return Material звука или null
+     * Получить объект Sound из названия звука удаления.
+     * @return Sound объект или стандартный звук, если не найден
      */
-    public org.bukkit.Sound getBreakSoundObject() {
-        try {
-            return org.bukkit.Sound.valueOf(breakSound);
-        } catch (IllegalArgumentException e) {
-            return org.bukkit.Sound.BLOCK_NOTE_BLOCK_BASS;
-        }
+    public Sound getBreakSoundObject() {
+        return Optional.ofNullable(Registry.SOUNDS.get(NamespacedKey.minecraft(breakSound.toLowerCase())))
+                .orElse(Sound.BLOCK_NOTE_BLOCK_BASS);
     }
 }

@@ -57,7 +57,7 @@ public class ChatListener implements Listener {
 
         if (text.equalsIgnoreCase("отмена") || text.equalsIgnoreCase("cancel")) {
             cleanupPlayer(player);
-            player.sendMessage(Component.text("§cДействие отменено."));
+            player.sendMessage(plugin.getConfigManager().getMessage("chat-cancel"));
             return;
         }
 
@@ -70,7 +70,7 @@ public class ChatListener implements Listener {
                     Claim claim = claimOpt.get();
                     claim.setDescription(text);
                     plugin.getStorage().saveClaimAsync(claim);
-                    player.sendMessage(Component.text("§aОписание успешно изменено!"));
+                    player.sendMessage(plugin.getConfigManager().getMessage("chat-desc-changed", "desc", text));
                     player.openInventory(new me.lovelace.advancedclaims.gui.SettingsGUI(plugin, player, claim).getInventory());
                 }
             });
@@ -88,16 +88,25 @@ public class ChatListener implements Listener {
                 OfflinePlayer target = Bukkit.getOfflinePlayer(text);
                 if (target == null || (!target.hasPlayedBefore() && !target.isOnline())) {
                     player.sendMessage(plugin.getConfigManager().getMessage("member-not-found"));
-                    player.openInventory(new me.lovelace.advancedclaims.gui.MembersGUI(plugin, player, claim).getInventory());
+                    if (claim.isRentalPlot()) {
+                        player.openInventory(new me.lovelace.advancedclaims.gui.RentalMembersGUI(plugin, player, claim).getInventory());
+                    } else {
+                        player.openInventory(new me.lovelace.advancedclaims.gui.MembersGUI(plugin, player, claim).getInventory());
+                    }
                     return;
                 }
 
                 if (claim.getTrust(target.getUniqueId()) != TrustLevel.NONE) {
-                    player.sendMessage(Component.text("§cИгрок уже является участником привата!"));
-                    player.openInventory(new me.lovelace.advancedclaims.gui.MembersGUI(plugin, player, claim).getInventory());
+                    player.sendMessage(plugin.getConfigManager().getMessage("member-already-exists"));
+                    if (claim.isRentalPlot()) {
+                        player.openInventory(new me.lovelace.advancedclaims.gui.RentalMembersGUI(plugin, player, claim).getInventory());
+                    } else {
+                        player.openInventory(new me.lovelace.advancedclaims.gui.MembersGUI(plugin, player, claim).getInventory());
+                    }
                     return;
                 }
 
+                // ПРОВЕРКА ЛИМИТОВ: Не более 5 чужих приватов и не более 5 чужих плотов
                 int memberCount = 0;
                 for (Claim c : plugin.getClaimManager().getAllClaims()) {
                     if (c.isRentalPlot() == claim.isRentalPlot() && c.getTrust(target.getUniqueId()) != TrustLevel.NONE && (c.getOwnerUuid() == null || !c.getOwnerUuid().equals(target.getUniqueId()))) {
@@ -106,13 +115,13 @@ public class ChatListener implements Listener {
                 }
                 
                 if (memberCount >= 5) {
-                    player.sendMessage(Component.text("§cЭтот игрок уже состоит в максимальном количестве " + (claim.isRentalPlot() ? "плотов!" : "приватов!")));
+                    player.sendMessage(Component.text("§cЭтот игрок уже состоит в максимальном количестве " + (claim.isRentalPlot() ? "чужих плотов (5)!" : "чужих приватов (5)!")));
                     return;
                 }
 
                 int defaultLimit = plugin.getConfigManager().getConfig().getInt("claim.members.default-limit", 5);
                 int absoluteLimit = plugin.getConfigManager().getConfig().getInt("claim.members.absolute-limit", 24);
-                int maxMembers = Math.min(absoluteLimit, defaultLimit);
+                int maxMembers = claim.isRentalPlot() ? 10 : Math.min(absoluteLimit, defaultLimit);
 
                 if (claim.getMembers().size() >= maxMembers) {
                     player.sendMessage(plugin.getConfigManager().getMessage("limit-members"));
@@ -131,7 +140,6 @@ public class ChatListener implements Listener {
                     target.getPlayer().sendMessage(msg);
                     plugin.getConfigManager().playSound(target.getPlayer(), "anchor-place");
                 }
-                player.openInventory(new me.lovelace.advancedclaims.gui.MembersGUI(plugin, player, claim).getInventory());
             });
             return;
         }
@@ -149,7 +157,7 @@ public class ChatListener implements Listener {
                     player.sendMessage(Component.text("§aЦена аренды установлена: §e" + price));
                     player.openInventory(new me.lovelace.advancedclaims.gui.RentalEditGUI(plugin, claim).getInventory());
                 } catch (NumberFormatException e) {
-                    player.sendMessage(Component.text("§cПожалуйста, введите корректное положительное число!"));
+                    player.sendMessage(plugin.getConfigManager().getMessage("msg-price-number"));
                     player.openInventory(new me.lovelace.advancedclaims.gui.RentalEditGUI(plugin, claim).getInventory());
                 }
             });

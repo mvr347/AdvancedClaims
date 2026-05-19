@@ -68,7 +68,7 @@ public class AnchorListener implements Listener {
             if (claim.getOwnerUuid().equals(player.getUniqueId())) {
                 player.openInventory(new DeleteConfirmGUI(plugin, player, claim).getInventory());
             } else {
-                player.sendMessage(Component.text(plugin.getConfigManager().getGuiText("anchor-cannot-break")));
+                player.sendMessage(plugin.getConfigManager().getMessage("anchor-cannot-break"));
             }
         }
     }
@@ -82,6 +82,7 @@ public class AnchorListener implements Listener {
         Block clickedBlock = event.getClickedBlock();
         if (clickedBlock == null) return;
 
+        // Если есть ожидающий приват, то не обрабатываем обычный клик по якорю
         if (pendingClaims.containsKey(player.getUniqueId())) return;
 
         Optional<Claim> existingClaimOpt = plugin.getClaimManager().getClaimAt(clickedBlock.getLocation());
@@ -92,6 +93,13 @@ public class AnchorListener implements Listener {
             if (clickedBlock.getX() == anchorLoc.getBlockX() &&
                     clickedBlock.getY() == anchorLoc.getBlockY() &&
                     clickedBlock.getZ() == anchorLoc.getBlockZ()) {
+
+                // Если приват в режиме осады и игрок НЕ является лидером клана, не открываем GUI
+                if (claim.isUnderSiege() && !player.getUniqueId().equals(claim.getOwnerUuid())) {
+                    event.setCancelled(true);
+                    player.sendMessage(plugin.getConfigManager().getMessage("siege-interact-deny"));
+                    return;
+                }
 
                 if (claim.getTrust(player.getUniqueId()).ordinal() >= TrustLevel.MANAGER.ordinal()) {
                     event.setCancelled(true);
@@ -116,9 +124,12 @@ public class AnchorListener implements Listener {
                 targetLoc.clone().add(tier.radiusX(), tier.radiusY(), tier.radiusZ())
         );
 
-        if (plugin.getClaimManager().checkOverlap(targetLoc.getWorld(), newBox)) {
-            player.sendMessage(plugin.getConfigManager().getMessage("claim-overlap"));
-            return;
+        // Проверка на пересечение с клановыми территориями
+        for (Claim existingClaim : plugin.getClaimManager().getAllClaims()) {
+            if (existingClaim.isClanTerritory() && newBox.overlaps(existingClaim.getBoundingBox())) {
+                player.sendMessage(plugin.getConfigManager().getMessage("clan-overlap-deny"));
+                return;
+            }
         }
 
         String worldName = targetLoc.getWorld().getName();

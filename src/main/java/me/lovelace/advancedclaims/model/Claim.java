@@ -8,11 +8,13 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Основная модель привата с полной поддержкой Paper API 1.21.11.
- * Все геттеры/setтеры имеют правильную обработку модифицированного состояния.
- */
 public class Claim {
+    
+    public enum ClaimType {
+        PLAYER,
+        CLAN
+    }
+
     private final UUID id;
     private final World world;
     private BoundingBox boundingBox;
@@ -24,6 +26,9 @@ public class Claim {
     private long lastActive;
     private final Map<UUID, TrustLevel> members = new ConcurrentHashMap<>();
     private final Map<ClaimFlag, Boolean> flags = new EnumMap<>(ClaimFlag.class);
+    private ClaimType claimType = ClaimType.PLAYER; // По умолчанию - приват игрока
+    private boolean isClanTerritory = false; // Новое поле
+    private boolean isUnderSiege = false; // Новое поле
 
     // Rental fields
     private long rentalPrice = 0;
@@ -58,7 +63,7 @@ public class Claim {
         }
     }
 
-    // Getters
+    // Getters & Setters
     public UUID getId() { return id; }
     public World getWorld() { return world; }
     public BoundingBox getBoundingBox() { return boundingBox; }
@@ -115,6 +120,16 @@ public class Claim {
 
     public Map<UUID, TrustLevel> getMembers() { return members; }
 
+    /**
+     * Удаляет игрока из списка участников привата и устанавливает флаг modified.
+     * @param playerUuid UUID игрока, которого нужно удалить.
+     */
+    public void removePlayer(UUID playerUuid) {
+        if (members.remove(playerUuid) != null) { // Проверяем, был ли игрок в списке
+            this.modified = true;
+        }
+    }
+
     public boolean getFlag(ClaimFlag flag) {
         return flags.getOrDefault(flag, flag.getDefaultState());
     }
@@ -125,6 +140,24 @@ public class Claim {
     }
 
     public Map<ClaimFlag, Boolean> getFlags() { return flags; }
+
+    public ClaimType getClaimType() { return claimType; }
+    public void setClaimType(ClaimType claimType) {
+        this.claimType = claimType;
+        this.modified = true;
+    }
+
+    public boolean isClanTerritory() { return isClanTerritory; }
+    public void setClanTerritory(boolean clanTerritory) {
+        isClanTerritory = clanTerritory;
+        this.modified = true;
+    }
+
+    public boolean isUnderSiege() { return isUnderSiege; }
+    public void setUnderSiege(boolean underSiege) {
+        isUnderSiege = underSiege;
+        this.modified = true;
+    }
 
     public boolean overlaps(BoundingBox other) {
         return this.boundingBox.overlaps(other);
@@ -169,7 +202,6 @@ public class Claim {
         return rentalEndTime > System.currentTimeMillis() && rentalEndTime > 0;
     }
 
-    // Rental Tax Methods
     public long getLastTaxTime() { return lastTaxTime; }
     public void setLastTaxTime(long lastTaxTime) {
         this.lastTaxTime = lastTaxTime;

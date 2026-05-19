@@ -31,14 +31,14 @@ public class SQLiteStorage {
     private final ExecutorService dbExecutor;
 
     private static final String CLAIMS_UPSERT =
-            "INSERT INTO claims (id, world, min_x, min_y, min_z, max_x, max_y, max_z, owner_uuid, name, description, anchor_x, anchor_y, anchor_z, created_at, last_active, home_x, home_y, home_z) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
+            "INSERT INTO claims (id, world, min_x, min_y, min_z, max_x, max_y, max_z, owner_uuid, name, description, anchor_x, anchor_y, anchor_z, created_at, last_active, home_x, home_y, home_z, claim_type, is_clan_territory, is_under_siege) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
                     "ON CONFLICT(id) DO UPDATE SET " +
                     "world=excluded.world, min_x=excluded.min_x, min_y=excluded.min_y, min_z=excluded.min_z, " +
                     "max_x=excluded.max_x, max_y=excluded.max_y, max_z=excluded.max_z, " +
                     "owner_uuid=excluded.owner_uuid, name=excluded.name, description=excluded.description, " +
                     "anchor_x=excluded.anchor_x, anchor_y=excluded.anchor_y, anchor_z=excluded.anchor_z, " +
-                    "last_active=excluded.last_active, home_x=excluded.home_x, home_y=excluded.home_y, home_z=excluded.home_z";
+                    "last_active=excluded.last_active, home_x=excluded.home_x, home_y=excluded.home_y, home_z=excluded.home_z, claim_type=excluded.claim_type, is_clan_territory=excluded.is_clan_territory, is_under_siege=excluded.is_under_siege";
 
     private static final String RENTALS_UPSERT =
             "INSERT INTO rentals (id, world, min_x, min_y, min_z, max_x, max_y, max_z, owner_uuid, name, description, anchor_x, anchor_y, anchor_z, created_at, last_active, home_x, home_y, home_z, rental_price, rental_end_time, parent_claim_id, indicator_type, hologram_id, last_tax_time) " +
@@ -60,20 +60,17 @@ public class SQLiteStorage {
     public CompletableFuture<Void> initDatabase() {
         return CompletableFuture.runAsync(() -> {
             try {
-                // 1. Инициализация ClaimsSQLITE.db
-                File claimsFile = new File(plugin.getDataFolder(), "storage/ClaimsSQLITE.db");
-                if (!claimsFile.exists()) {
-                    claimsFile.getParentFile().mkdirs();
+                File storageDir = new File(plugin.getDataFolder(), "storage");
+                if (!storageDir.exists()) {
+                    storageDir.mkdirs();
                 }
+                
+                File claimsFile = new File(storageDir, "ClaimsSQLITE.db");
                 claimsConnection = DriverManager.getConnection("jdbc:sqlite:" + claimsFile.getAbsolutePath());
                 configureConnection(claimsConnection);
                 initClaimsTables(claimsConnection);
 
-                // 2. Инициализация RentalsSQLITE.db
-                File rentalsFile = new File(plugin.getDataFolder(), "storage/RentalsSQLITE.db");
-                if (!rentalsFile.exists()) {
-                    rentalsFile.getParentFile().mkdirs();
-                }
+                File rentalsFile = new File(storageDir, "RentalsSQLITE.db");
                 rentalsConnection = DriverManager.getConnection("jdbc:sqlite:" + rentalsFile.getAbsolutePath());
                 configureConnection(rentalsConnection);
                 initRentalsTables(rentalsConnection);
@@ -95,11 +92,15 @@ public class SQLiteStorage {
 
     private void initClaimsTables(Connection conn) throws SQLException {
         try (Statement stmt = conn.createStatement()) {
-            stmt.execute("CREATE TABLE IF NOT EXISTS claims (id VARCHAR(36) PRIMARY KEY, world VARCHAR(64), min_x INT, min_y INT, min_z INT, max_x INT, max_y INT, max_z INT, owner_uuid VARCHAR(36), name VARCHAR(128), description TEXT, anchor_x INT, anchor_y INT, anchor_z INT, created_at BIGINT, last_active BIGINT, home_x INT, home_y INT, home_z INT);");
+            stmt.execute("CREATE TABLE IF NOT EXISTS claims (id VARCHAR(36) PRIMARY KEY, world VARCHAR(64), min_x INT, min_y INT, min_z INT, max_x INT, max_y INT, max_z INT, owner_uuid VARCHAR(36), name VARCHAR(128), description TEXT, anchor_x INT, anchor_y INT, anchor_z INT, created_at BIGINT, last_active BIGINT, home_x INT, home_y INT, home_z INT, claim_type VARCHAR(32) DEFAULT 'PLAYER', is_clan_territory BOOLEAN DEFAULT FALSE, is_under_siege BOOLEAN DEFAULT FALSE);");
             stmt.execute("CREATE TABLE IF NOT EXISTS claim_members (claim_id VARCHAR(36), player_uuid VARCHAR(36), trust_level VARCHAR(32), PRIMARY KEY (claim_id, player_uuid), FOREIGN KEY(claim_id) REFERENCES claims(id) ON DELETE CASCADE);");
             stmt.execute("CREATE TABLE IF NOT EXISTS claim_flags (claim_id VARCHAR(36), flag_name VARCHAR(64), state BOOLEAN, PRIMARY KEY (claim_id, flag_name), FOREIGN KEY(claim_id) REFERENCES claims(id) ON DELETE CASCADE);");
             
-            // Таблицы пользователей (только в ClaimsDB)
+            // Добавление новых колонок, если их нет
+            try { stmt.execute("ALTER TABLE claims ADD COLUMN claim_type VARCHAR(32) DEFAULT 'PLAYER';"); } catch (SQLException ignored) {}
+            try { stmt.execute("ALTER TABLE claims ADD COLUMN is_clan_territory BOOLEAN DEFAULT FALSE;"); } catch (SQLException ignored) {}
+            try { stmt.execute("ALTER TABLE claims ADD COLUMN is_under_siege BOOLEAN DEFAULT FALSE;"); } catch (SQLException ignored) {}
+
             stmt.execute("CREATE TABLE IF NOT EXISTS users (uuid VARCHAR(36) PRIMARY KEY, expansion_blocks INT, bonus_members INT, bonus_slots INT, bonus_blocks INT);");
             stmt.execute("CREATE TABLE IF NOT EXISTS user_quests (uuid VARCHAR(36), quest_id VARCHAR(64), progress INT, completed BOOLEAN, PRIMARY KEY (uuid, quest_id), FOREIGN KEY(uuid) REFERENCES users(uuid) ON DELETE CASCADE);");
             stmt.execute("CREATE TABLE IF NOT EXISTS user_buffs (uuid VARCHAR(36), buff_name VARCHAR(64), PRIMARY KEY (uuid, buff_name), FOREIGN KEY(uuid) REFERENCES users(uuid) ON DELETE CASCADE);");
@@ -150,6 +151,10 @@ public class SQLiteStorage {
                     claim.setIndicatorType(IndicatorType.valueOf(rs.getString("indicator_type")));
                     claim.setHologramId(rs.getString("hologram_id"));
                     claim.setLastTaxTime(rs.getLong("last_tax_time"));
+                } else {
+                    claim.setClaimType(Claim.ClaimType.valueOf(rs.getString("claim_type")));
+                    claim.setClanTerritory(rs.getBoolean("is_clan_territory"));
+                    claim.setUnderSiege(rs.getBoolean("is_under_siege"));
                 }
 
                 claimsMap.put(id, claim);
@@ -183,6 +188,85 @@ public class SQLiteStorage {
         }
 
         return new ArrayList<>(claimsMap.values());
+    }
+    
+    public CompletableFuture<Claim> loadClaimAsync(UUID claimId) {
+        return CompletableFuture.supplyAsync(() -> {
+            Claim claim = loadSingleClaimFromDB(claimsConnection, "claims", "claim_members", "claim_flags", "claim_id", claimId, false);
+            if (claim != null) {
+                return claim;
+            }
+            return loadSingleClaimFromDB(rentalsConnection, "rentals", "rental_members", "rental_flags", "rental_id", claimId, true);
+        }, dbExecutor);
+    }
+
+    private Claim loadSingleClaimFromDB(Connection conn, String tableName, String memberTable, String flagTable, String idColumn, UUID claimId, boolean isRental) {
+        Claim claim = null;
+        try (PreparedStatement ps = conn.prepareStatement("SELECT * FROM " + tableName + " WHERE id = ?")) {
+            ps.setString(1, claimId.toString());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    World world = Bukkit.getWorld(rs.getString("world"));
+                    if (world == null) return null;
+
+                    UUID id = UUID.fromString(rs.getString("id"));
+                    BoundingBox box = new BoundingBox(rs.getInt("min_x"), rs.getInt("min_y"), rs.getInt("min_z"), rs.getInt("max_x"), rs.getInt("max_y"), rs.getInt("max_z"));
+                    String ownerUuidStr = rs.getString("owner_uuid");
+                    UUID ownerUuid = ownerUuidStr != null ? UUID.fromString(ownerUuidStr) : null;
+
+                    claim = new Claim(id, world, box, ownerUuid, new Location(world, rs.getInt("anchor_x"), rs.getInt("anchor_y"), rs.getInt("anchor_z")));
+
+                    String name = rs.getString("name"); if (name != null) claim.setName(name);
+                    String desc = rs.getString("description"); if (desc != null) claim.setDescription(desc);
+
+                    int hx = rs.getInt("home_x");
+                    if (!rs.wasNull()) claim.setHomeLocation(new Location(world, hx, rs.getInt("home_y"), rs.getInt("home_z")));
+
+                    if (isRental) {
+                        claim.setRentalPrice(rs.getLong("rental_price"));
+                        claim.setRentalEndTime(rs.getLong("rental_end_time"));
+                        String parentId = rs.getString("parent_claim_id");
+                        if (parentId != null) claim.setParentClaimId(UUID.fromString(parentId));
+                        claim.setIndicatorType(IndicatorType.valueOf(rs.getString("indicator_type")));
+                        claim.setHologramId(rs.getString("hologram_id"));
+                        claim.setLastTaxTime(rs.getLong("last_tax_time"));
+                    } else {
+                        claim.setClaimType(Claim.ClaimType.valueOf(rs.getString("claim_type")));
+                        claim.setClanTerritory(rs.getBoolean("is_clan_territory"));
+                        claim.setUnderSiege(rs.getBoolean("is_under_siege"));
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Error loading single claim from " + tableName + ": " + e.getMessage());
+            return null;
+        }
+
+        if (claim == null) {
+            return null;
+        }
+
+        try (PreparedStatement ps = conn.prepareStatement("SELECT * FROM " + memberTable + " WHERE " + idColumn + " = ?")) {
+            ps.setString(1, claimId.toString());
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    claim.getMembers().put(UUID.fromString(rs.getString("player_uuid")), TrustLevel.valueOf(rs.getString("trust_level")));
+                }
+            }
+        } catch (SQLException e) { plugin.getLogger().severe("Error loading members for claim " + claimId + ": " + e.getMessage()); }
+
+        if (!isRental) { // Флаги только для обычных приватов
+            try (PreparedStatement ps = conn.prepareStatement("SELECT * FROM " + flagTable + " WHERE " + idColumn + " = ?")) {
+                ps.setString(1, claimId.toString());
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        try { claim.setFlag(ClaimFlag.valueOf(rs.getString("flag_name")), rs.getInt("state") == 1); } catch (IllegalArgumentException ignored) {}
+                    }
+                }
+            } catch (SQLException e) { plugin.getLogger().severe("Error loading flags for claim " + claimId + ": " + e.getMessage()); }
+        }
+
+        return claim;
     }
 
     public void saveClaimAsync(Claim claim) {
@@ -292,6 +376,10 @@ public class SQLiteStorage {
             ps.setString(23, claim.getIndicatorType().name());
             ps.setString(24, claim.getHologramId());
             ps.setLong(25, claim.getLastTaxTime());
+        } else {
+            ps.setString(20, claim.getClaimType().name());
+            ps.setBoolean(21, claim.isClanTerritory());
+            ps.setBoolean(22, claim.isUnderSiege());
         }
     }
 
@@ -343,10 +431,7 @@ public class SQLiteStorage {
             } catch (SQLException e) { plugin.getLogger().severe("SQL Error: " + e.getMessage()); }
         }, dbExecutor);
     }
-
-    // Удаление привата (БЕЗ сохранения флагов, если не переезд)
-    // Если нужно сохранить флаги при move, это делается отдельным копированием перед удалением.
-    // Здесь мы просто чистим всё.
+    
     public void deleteClaimAsync(UUID claimId) {
         boolean isRental = plugin.getClaimManager().getClaimById(claimId).map(Claim::isRentalPlot).orElse(false);
         Connection conn = isRental ? rentalsConnection : claimsConnection;
@@ -375,7 +460,6 @@ public class SQLiteStorage {
     }
 
     public CompletableFuture<UserData> loadUserData(UUID uuid) {
-        // Данные игроков храним ТОЛЬКО в ClaimsSQLITE.db
         return CompletableFuture.supplyAsync(() -> {
             UserData data = new UserData(uuid);
             try (PreparedStatement ps = claimsConnection.prepareStatement("SELECT * FROM users WHERE uuid = ?")) {

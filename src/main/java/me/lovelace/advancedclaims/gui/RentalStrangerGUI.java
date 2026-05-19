@@ -12,10 +12,10 @@ public class RentalStrangerGUI extends AbstractGUI {
     private final Claim plot;
 
     public RentalStrangerGUI(AdvancedClaims plugin, Claim plot) {
-        super(9, plugin.getConfigManager().getComponent("rental-player.title", "name", plot.getName()));
+        super(9, plugin.getConfigManager().getComponent("gui.rental-player.title", "name", plot.getName()));
         this.plugin = plugin;
         this.plot = plot;
-        this.inventory = Bukkit.createInventory(this, InventoryType.HOPPER, plugin.getConfigManager().getComponent("rental-player.title", "name", plot.getName()));
+        this.inventory = Bukkit.createInventory(this, InventoryType.HOPPER, plugin.getConfigManager().getComponent("gui.rental-player.title", "name", plot.getName()));
         setMenuItems();
     }
 
@@ -32,8 +32,8 @@ public class RentalStrangerGUI extends AbstractGUI {
 
         // Инфа по центру (Слот 2)
         inventory.setItem(2, createHead(HEAD_INFO,
-                plugin.getConfigManager().getComponent("rental-edit.info-name"),
-                plugin.getConfigManager().getHelpMessage("main.info-lore", "owner", ownerName, "size", String.valueOf(sizeX), "points", "0")));
+                plugin.getConfigManager().getComponent("gui.rental-edit.info-name"),
+                plugin.getConfigManager().getHelpMessage("gui.main.info-lore", "owner", ownerName, "size", String.valueOf(sizeX), "points", "0")));
         fillEmptySlots();
     }
 
@@ -47,8 +47,12 @@ public class RentalStrangerGUI extends AbstractGUI {
                 viewer.closeInventory();
                 double x = (plot.getBoundingBox().getMinX() + plot.getBoundingBox().getMaxX()) / 2.0;
                 double z = (plot.getBoundingBox().getMinZ() + plot.getBoundingBox().getMaxZ()) / 2.0;
-                double y = viewer.getWorld().getHighestBlockYAt((int)x, (int)z) + 1;
-                viewer.teleport(new org.bukkit.Location(viewer.getWorld(), x, y, z));
+                
+                org.bukkit.World targetWorld = plot.getWorld();
+                if (targetWorld != null) {
+                    double y = targetWorld.getHighestBlockYAt((int)x, (int)z) + 1;
+                    viewer.teleport(new org.bukkit.Location(targetWorld, x, y, z));
+                }
             } else if (event.isRightClick()) {
                 plugin.getConfigManager().playSound(viewer, "gui-click");
                 viewer.closeInventory();
